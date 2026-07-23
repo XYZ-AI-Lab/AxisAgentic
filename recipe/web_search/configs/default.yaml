@@ -1,0 +1,416 @@
+schema_version: 1
+
+# Recipe web-search template.
+#
+# Keep this file as the single annotated config surface. Model-specific runs
+# should override the concrete values below (model id, endpoint URL, output dir,
+# request_extra_body, concurrency, judge, etc.) instead of adding a near-copy of
+# this YAML.
+
+run:
+  # Use a run-specific leaf directory, for example:
+  # axis_log://web_search_infer/browsecomp_deepseek_v4_pro_YYYYMMDD_HHMM
+  output_dir: axis_log://web_search_infer/browsecomp_default
+  num_runs: 1
+  resume: false
+  # Default-off: exact request/response payload logging can serialize large
+  # conversations and introduce client-side latency at high concurrency.
+  model_request_logging: false
+  # auto resolves a model-family renderer from model.endpoint_profile and
+  # agentic/model_assets/manifest.yaml when a prompt render asset exists.
+  system_prompt_render_template: auto
+  # Prefer the repo-relative env file.
+  env_file: .envs/.env
+  log_level: INFO
+
+model:
+  # Required per run. Set these three fields together:
+  # - openai_model: served model name accepted by the endpoint.
+  # - openai_base_url: OpenAI-compatible /v1 base URL.
+  # - endpoint_profile: model-family behavior selector.
+  openai_model: null
+  openai_base_url: null
+  api_key_env: OPENAI_API_KEY
+  # Qwen3.5-397B-A17B uses qwen3-thinking; the exact model id selects its
+  # Qwen3.5 chat-template asset from agentic/model_assets/manifest.yaml.
+  endpoint_profile: null  # deepseek-v4-pro, glm-5.1, kimi-k2.6, qwen3-thinking
+  # Replay assistant reasoning_content into later model requests. Keep enabled
+  # for reasoning-visibility trajectory collection unless the endpoint rejects
+  # historical reasoning fields.
+  preserve_reasoning_content: true
+  response_reasoning_fields:
+  - reasoning_content
+  - reasoning
+  - reasoning_details
+  max_tokens_field: null
+  parallel_tool_calls: false
+  parse_embedded_thinking: true
+  transport:
+    # Per HTTP model request timeout passed to AsyncOpenAI. High-latency
+    # endpoints may spend up to this long before timeout retry handling starts.
+    timeout:
+      total_seconds: 600
+    # Transient endpoint failures retried inside the same model call; they do
+    # not consume task retry or response-retry budget.
+    retry:
+      retryable_status_codes:
+      - 408
+      - 429
+      - 500
+      - 502
+      - 503
+      - 504
+      backoff_base_seconds: 60
+      backoff_multiplier: 2
+      backoff_max_seconds: 300
+      jitter: true
+      respect_retry_after: true
+      retry_on_timeout: true
+      retry_on_connection_error: true
+      # Continuous transient endpoint failures with no successful model
+      # response for this long trigger process exit. Any success resets it.
+      exit_after_seconds: 1800
+
+  # Provider/serving-specific request body.
+  #
+  # This maps to the OpenAI SDK extra_body field and is sent alongside the
+  # standard chat-completions payload. Leave it empty for endpoints that either
+  # ignore template controls or already expose the desired default behavior.
+  #
+  # For reasoning-visible collection, these flags control whether historical
+  # assistant thinking is rendered back into the endpoint's chat template. They
+  # do not change AxisAgentic trace storage; content, reasoning_content, and
+  # tool calls remain structured in the logs.
+  request_extra_body: {}
+
+  # DeepSeek V4 Pro reasoning-visible self-host example.
+  # - chat_template_kwargs.thinking=true selects the thinking-mode rendering
+  #   path so prior reasoning_content can be rendered inside <think>...</think>.
+  # - separate_reasoning=true asks the compatible serving path to keep reasoning
+  #   separated from visible assistant content in responses.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     thinking: true
+  #   separate_reasoning: true
+
+  # GLM 5.1 reasoning-visible self-host example.
+  # - clear_thinking=false prevents the GLM template from clearing historical
+  #   assistant thinking before later user turns.
+  # - enable_thinking=true starts the next assistant generation in thinking mode.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     clear_thinking: false
+  #     enable_thinking: true
+
+  # Kimi K2.6 reasoning-visible self-host example.
+  # - thinking=true enables Kimi thinking-mode prompt rendering.
+  # - preserve_thinking=true keeps historical <think>...</think> content instead
+  #   of replacing prior thinking with empty <think></think> blocks.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     thinking: true
+  #     preserve_thinking: true
+
+  # Qwen3.5-397B-A17B self-host example.
+  # - endpoint_profile remains qwen3-thinking.
+  # - configure the serving host with its Qwen3 reasoning and tool-call
+  #   parsers when the endpoint requires them.
+  # - enable_thinking=true keeps the next assistant generation in thinking mode.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     enable_thinking: true
+
+  temperature: 1.0
+  top_p: 0.95
+  repetition_penalty: 1.05
+  max_output_tokens: 16384
+  # Set to the endpoint's reported usable context. Example values below should
+  # be verified against the serving endpoint:
+  # - DeepSeek V4 Pro self-host: 253440
+  # - GLM 5.1 BF16 self-host: 202752
+  # - Kimi K2.6 and Qwen3.5-397B-A17B: 262144
+  context:
+    max_context_length: 262144
+    safety_margin: 0
+    # Used only when limit_detection=estimated:
+    # - model_client: delegate to model_client.estimate_tokens.
+    # - cheap: additive character estimate with incremental tracking and
+    #   provider input_tokens calibration.
+    # - chat_template: tokenizer/chat-template estimate; more exact near the
+    #   limit but can add client-side latency on long conversations.
+    estimator: cheap
+    # Context-limit detection mode. Allowed values:
+    # - provider_error: default for high-concurrency rollout. The runtime does
+    #   not run local context-budget checks; it relies on model-client
+    #   context-length errors and finish_reason=length, then applies
+    #   agent.retry.generation_limit_recovery below.
+    # - estimated: run local token-estimate preflight before model calls. Use
+    #   only when the provider does not reliably reject over-context requests,
+    #   or when proactive local finalization is explicitly desired.
+    limit_detection: provider_error
+    token_estimation_chars_per_token: 3.0
+  # Provider-neutral retries for truncated or severely repetitive responses.
+  response_retry:
+    wait_seconds: 30
+    max_attempts: 10
+
+benchmark:
+  # Supported names and data_path examples:
+  # - browsecomp:
+  #   axis_data://browsecomp/standardized_data.jsonl
+  # - browsecomp_zh:
+  #   axis_data://browsecomp_zh/standardized_data.jsonl
+  # - gaia:
+  #   axis_data://gaia/standardized_data.jsonl
+  # - hle:
+  #   axis_data://hle/standardized_data.jsonl
+  # - deepsearchqa:
+  #   axis_data://deepsearchqa/DSQA-full.csv
+  #   The loader uses DSQA-full.csv and the judge uses the DeepSearchQA JSON correctness prompt.
+  #   This benchmark expects answer_type metadata to stay hidden from the task prompt and visible only to the judge.
+  # - livebrowsecomp:
+  #   axis_data://livebrowsecomp/standardized_data.jsonl
+  #   Live BrowseComp variant (arXiv:2605.28721). Prepare the standardized data by decrypting
+  #   the encrypted HuggingFace rows into BrowseComp-style task_question/ground_truth. Answers
+  #   share BrowseComp's short factual schema/style, so it reuses the BrowseComp loader and the
+  #   official BrowseComp judge (same template + A/B parser).
+  name: browsecomp
+  data_path: axis_data://browsecomp/standardized_data.jsonl
+  max_tasks: null
+  shuffle_tasks: true
+  shuffle_seed: null
+  # Tune to endpoint capacity. DeepSearchQA tasks can require many
+  # searches/scrapes, so lower concurrency may be appropriate.
+  max_concurrent: 32
+
+agent:
+  # Suggested starting points:
+  # - 300 for browsecomp and browsecomp_zh.
+  # - 200 for gaia, hle, and deepsearchqa.
+  # - 650 for high-budget runs: pair with context_compression.enabled=true (see
+  #   below) so long rollouts don't grow into the context-length limit. The
+  #   empty-finalization fallback (intermediate-box / compaction-state answer
+  #   rescue) is always on, so high-budget attempts still finalize an answer.
+  max_turns: 300
+  keep_tool_result: -1
+  # Prompt and web-search tool-schema profile. Picks the system-prompt template in
+  # recipe/web_search/agent/prompts.py (generate_system_prompt), e.g. deepsearchqa ->
+  # DEEPSEARCHQA_SYSTEM_PROMPT_TEMPLATE.
+  # Allowed: default | deepsearchqa | livebrowsecomp | livebrowsecomp_notools
+  prompt_profile: default
+  # Date rendered into the system prompt's "Today is:" line.
+  # 'today' / 'auto' / 'now' (or null) -> current system date (UTC+8) at runtime;
+  # any explicit value (e.g. '2026-06-15') is used verbatim to pin a fixed date.
+  # system_prompt_date: today
+  # Default OpenAI-compatible tool observations use role=tool. Set to user only
+  # for explicit compatibility experiments that need user-role tool responses
+  # when an endpoint requires user-role tool responses.
+  tool_result_role: tool
+  retry:
+    max_task_retries: 0
+    include_failure_summary: false
+    max_final_answer_attempts: 1
+    # When true, one rollout emits per-attempt-budget artifacts. The run dir
+    # itself is the largest budget (max_task_retries+1, == a full non-sweep run);
+    # attempt_budget_<B> subdirs cover the reduced budgets 1..max_task_retries,
+    # each reporting accuracy as if at most B attempts were allowed. The max
+    # budget is not duplicated into its own subdir. max_task_retries keeps its
+    # "retries" meaning.
+    attempt_budget_sweep_enabled: false
+    # Controls both provider context-length errors and model responses with
+    # finish_reason=length.
+    generation_limit_recovery:
+      # Allowed values:
+      # - retry: default for non-final attempts; end this attempt and use the
+      #   remaining outer retry quota.
+      # - rollback: roll back the latest assistant/tool-result exchange and
+      #   regenerate within the same attempt.
+      non_final_attempt: retry
+      # Allowed values:
+      # - rollback: default for the final attempt; repeatedly roll back older
+      #   assistant/tool-result exchanges and regenerate with the final prompt.
+      # - terminate: stop immediately when no outer retry remains.
+      final_attempt: rollback
+  # Periodic context compaction: every `interval` assistant turns, summarize all
+  # but the last `recent_window` turns into one compact state block. Keeps long
+  # high-budget rollouts from growing into the context-length limit. Requires a
+  # compaction LLM endpoint below. Leave enabled=false for original behavior
+  # (no overhead).
+  context_compression:
+    enabled: false
+    # Compress every N assistant turns.
+    interval: 10
+    # Keep the last N turns verbatim; only earlier turns are summarized.
+    recent_window: 10
+    llm:
+      # OpenAI-compatible endpoint serving the compaction model (e.g.
+      # gpt-oss-120b or Qwen3-30B-A3B). Leave null to fall back to env vars.
+      base_url: null
+      model_name: null
+      # Name of the env var holding the compaction LLM API key.
+      api_key_env: COMPRESSION_LLM_API_KEY
+  # Post-answer self-verification. After a boxed answer the candidate model re-verifies it
+  # (tool-using, up to verification_max_turns turns); on an incorrect/unparseable verdict it
+  # re-answers (up to max_reanswer_attempts), re-verifying each new answer. verdict_resample_max_attempts
+  # retries an unparseable verdict before treating it as not-correct. Verifier and re-answer both run
+  # on the candidate model (no separate verifier endpoint).
+  self_verification:
+    enabled: true
+    max_reanswer_attempts: 3
+    verification_max_turns: 300
+    verdict_resample_max_attempts: 3
+  # Discard-all context management: a more aggressive alternative to
+  # context_compression. When the last model call's prompt usage exceeds
+  # trigger_ratio of the context window, discard ALL prior tool-call history and
+  # reopen the task from a clean context (system prompt + original question)
+  # instead of summarizing. Mutually exclusive with context_compression, and
+  # requires model.context.limit_detection=provider_error (both enforced
+  # fail-fast). Leave enabled=false for original behavior (no overhead).
+  discard_all:
+    enabled: false
+    # Reset when observed prompt tokens exceed this fraction of the context window.
+    trigger_ratio: 0.80
+    # Minimum assistant turns between two resets (anti-thrash guard).
+    min_turns_between: 3
+    # Global tool-call cap for the attempt; does not reset on a discard and
+    # supersedes max_turns when discard-all is enabled. On hit, forces a final
+    # answer (calls past the cap are rejected before execution).
+    max_tool_calls: 1800
+
+tools:
+  # Register zero tools for a pure-model baseline (no search/scrape/python).
+  # Pair with agent.prompt_profile=livebrowsecomp_notools to drop the tool-call
+  # rule line from the system prompt.
+  disable_all: false
+  serper_base_url: null
+  jina_base_url: null
+  max_content_length: 409600   # raw page limit before extraction; increase when supported by the endpoint
+  # Optional page/content summarizer used by web-search tooling.
+  summary_llm:
+    base_url: null
+    model_name: null
+    api_key_env: SUMMARY_LLM_API_KEY
+    # ---- scrape extraction mode ----
+    #   chunked_extraction: false                             -> single-shot extraction
+    #   chunked_extraction: true  + chunk_strategy: single    -> map then one reduce call
+    #   chunked_extraction: true  + chunk_strategy: recursive -> map then recursive reduce
+    # These two lines are the only mode switches; every other summary_llm field (max_input_chars /
+    # chunk_overlap_chars / max_chunks / chunk_max_concurrent / max_recursion_depth / cache_enabled /
+    # timeout) is a default and is omitted here.
+    chunked_extraction: true    # default mode
+    chunk_strategy: single      # "single" or "recursive"
+    # ---- DeepSeek-V4-Pro scrape-extraction recipe (uncomment + fill to use deepseek as the summary LLM) ----
+    # DeepSeek-V4-Pro example. Reasoning is disabled so the response budget is
+    # reserved for extraction. Pair with max_content_length: 1000000 when the
+    # endpoint supports a larger input context.
+    #   base_url: https://api.deepseek.com
+    #   model_name: deepseek-v4-pro
+    #   api_key_env: DEEPSEEK_API_KEY
+    #   request_extra_body: {"thinking": {"type": "disabled"}}   # reasoning OFF (then 8192 max_tokens is plenty)
+    #   max_input_chars: 409600        # only chunk beyond this; exploits deepseek's long context (default 120000)
+    #   chunk_overlap_chars: 16384     # larger overlap to bridge the long single chunks (default 1200)
+    # Advanced extraction toggles. Keep them off by default for the baseline
+    # behavior; enable them when the corresponding feature is needed.
+    global_anchor_enabled: false
+    chunk_envelope_mode: strict_caveat  # one of: strict, soft, strict_caveat
+    csv_layer_b_enabled: false
+    # Transient-error retry. jitter + respect_retry_after only affect the retry
+    # (instability) path; a request that succeeds first try is unaffected.
+    retry:
+      max_attempts: 5
+      backoff_base_seconds: 30
+      backoff_multiplier: 2
+      backoff_max_seconds: 1200
+      retryable_status_codes: [408, 429]
+      jitter: true
+      respect_retry_after: true
+  # Jina fetch + direct-HTTP fallback (short read; fixed backoff).
+  scrape:
+    timeout:
+      connect_seconds: 20
+      read_seconds: 60
+    retry:
+      max_attempts: 4
+      backoff_base_seconds: 1
+      backoff_multiplier: 2
+      backoff_max_seconds: 8
+      retryable_status_codes: [408, 409, 425, 429]
+    fallback_max_attempts: 3
+  # Serper web search. Only retries connection errors, timeouts, and the listed
+  # status codes (no longer every 4xx).
+  search:
+    timeout:
+      total_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_base_seconds: 4
+      backoff_multiplier: 2
+      backoff_max_seconds: 10
+      retryable_status_codes: [408, 429]
+  # Session-scoped code sandbox tools (E2B sandbox). Default-off.
+  # Enabling registers two flat tools, `python_exec(code=...)` and
+  # `shell_exec(cmd=...)`, backed by one shared sandbox per task attempt. The
+  # sandbox is created lazily on the first code-tool call; tasks that only use
+  # search/scrape do not allocate E2B. python_exec is a stateful notebook-like
+  # Python interpreter. shell_exec is a low-frequency escape hatch for shell
+  # commands such as pip install, make, gcc/g++, curl/wget, ls/cat/touch. Both
+  # tools share the same filesystem and package environment, so shell-installed
+  # packages and shell-written files are visible to python_exec. Requires the
+  # e2b-code-interpreter package and a valid E2B_API_KEY; the runner fails fast
+  # at startup if either is missing while enabled.
+  code_exec:
+    enabled: false
+    sandbox_timeout: 600
+    # template_id: null            # optional E2B template; null uses the built-in one
+    # max_calls_per_task: null     # optional per-task execution cap
+    # Transient-error retry for E2B sandbox calls. A 429 rate-limit is waited out
+    # and retried (summary-LLM-style profile) instead of being returned as the
+    # tool response. Defaults below mirror the summary-LLM 429 mitigation.
+    retry:
+      max_attempts: 5
+      backoff_base_seconds: 30
+      backoff_multiplier: 2
+      backoff_max_seconds: 240
+      retryable_status_codes: [408, 429]
+      jitter: true
+      respect_retry_after: true
+
+judge:
+  online: true
+  # Default-off: exact judge request/response logging can serialize many judge
+  # payloads and introduce client-side latency at high concurrency.
+  request_logging: false
+  # Use lower judge concurrency for shared judge endpoints if rate limiting or
+  # queueing is observed.
+  max_concurrent: 20
+  judge_times: 5
+  judge_max_tokens: 1024
+  judge_empty_length_retry_max_tokens: 32768
+  stable_seconds: 10
+  poll_seconds: 15
+  # Set these for LLM judging or normalized judge metadata, for example:
+  # judge_model: deepseek-v4-pro
+  # judge_base_url: http://judge.example/v1
+  judge_model: null
+  judge_base_url: null
+  api_key_env: JUDGE_API_KEY
+  # DeepSearchQA-only macro-F1 verifier (Kaggle-starter prompt). When active,
+  # runs after the standard A/B judge over the same source predictions and
+  # writes a separate ``dsqa_f1_*`` artifact family per ``run_*/`` root.
+  # ``enabled`` is honoured only when ``benchmark.name == 'deepsearchqa'``;
+  # the runner force-clears it to ``false`` for every other benchmark, and
+  # ``run_config.effective.yaml`` reflects that clearing.
+  dsqa_f1_verify:
+    enabled: true
+    workers: 5
+    retries: 5
+    request_timeout: 180
+    max_tokens: 8192
+    progress_every: 50
+    resume: true
+    retry_sleep_cap: 30.0
+    temperature: null
+    # When null, each field inherits from the parent ``judge.*`` block above.
+    judge_model: null
+    judge_base_url: null
+    api_key_env: null

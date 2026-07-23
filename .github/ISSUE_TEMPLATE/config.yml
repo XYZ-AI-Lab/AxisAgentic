@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/XYZ-AI-Lab/AxisAgentic/security/advisories/new
+    about: Please report security vulnerabilities privately, not as public issues. See SECURITY.md.
+  - name: Questions and discussion
+    url: https://github.com/XYZ-AI-Lab/AxisAgentic/discussions
+    about: Ask questions and discuss ideas with the community.

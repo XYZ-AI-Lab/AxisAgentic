@@ -1,0 +1,25 @@
+AxisAgentic
+Copyright 2026 XYZ AI Lab and contributors.
+
+This distribution contains material adapted from or based on the following
+third-party sources. The attribution and licensing terms for those portions
+remain applicable; this notice does not replace or supersede the upstream
+terms.
+
+1. Alibaba-NLP/DeepResearch
+
+   https://github.com/Alibaba-NLP/DeepResearch
+   https://github.com/Alibaba-NLP/DeepResearch/blob/main/WebAgent/WebWatcher/infer/evaluation/prompt.py
+
+   Portions of the web-search evaluation prompts and judge wording are based
+   on this project. The upstream project is distributed under the Apache
+   License 2.0. Its copyright and license notices are preserved by reference.
+
+2. DeepSearchQA starter notebook
+
+   https://www.kaggle.com/code/andrewmingwang/deepsearchqa-starter-code
+
+   The DeepSearchQA judge-prompt implementation references and adapts wording
+   from this notebook by Andrew Wang. Kaggle identifies the public notebook as
+   released under the Apache License 2.0. Its attribution and license terms
+   remain applicable to the adapted portions.

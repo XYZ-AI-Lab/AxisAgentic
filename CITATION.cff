@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "AxisAgentic: An Extensible Runtime and Evaluation Framework for Long-Horizon Agents"
+type: software
+authors:
+  - family-names: "Wang"
+    given-names: "Jinyu"
+  - family-names: "Zhang"
+    given-names: "Yifei"
+  - name: "XYZ Agentic Team"
+year: 2026
+url: "https://github.com/XYZ-AI-Lab/AxisAgentic"
+repository-code: "https://github.com/XYZ-AI-Lab/AxisAgentic"
+license: Apache-2.0

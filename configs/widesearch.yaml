@@ -1,0 +1,165 @@
+schema_version: 1
+run:
+  output_dir: axis_log://wide_search_infer/widesearch
+  num_runs: 1
+  resume: false
+  force_resume_finalized_run: false
+  model_request_logging: false
+  system_prompt_render_template: auto
+  env_file: .envs/.env
+  log_level: INFO
+model:
+  openai_model: xyz-aquila-pro
+  openai_base_url: null
+  api_key_env: OPENAI_API_KEY
+  endpoint_profile: qwen3-thinking
+  preserve_reasoning_content: true
+  response_reasoning_fields:
+  - reasoning_content
+  - reasoning
+  - reasoning_details
+  max_tokens_field: null
+  parallel_tool_calls: false
+  parse_embedded_thinking: true
+  transport:
+    timeout:
+      total_seconds: 600
+    retry:
+      retryable_status_codes:
+      - 401
+      - 408
+      - 429
+      - 500
+      - 502
+      - 503
+      - 504
+      backoff_base_seconds: 60
+      backoff_multiplier: 2
+      backoff_max_seconds: 300
+      jitter: true
+      respect_retry_after: true
+      retry_on_timeout: true
+      retry_on_connection_error: true
+      exit_after_seconds: 1800
+  request_extra_body:
+    chat_template_kwargs:
+      enable_thinking: true
+      preserve_thinking: true
+  temperature: 1.0
+  top_p: 0.95
+  repetition_penalty: 1.05
+  max_output_tokens: 16384
+  context:
+    max_context_length: 262144
+    safety_margin: 4096
+    estimator: cheap
+    limit_detection: provider_error
+    token_estimation_chars_per_token: 3.0
+  response_retry:
+    wait_seconds: 30
+    max_attempts: 10
+benchmark:
+  name: widesearch
+  data_path: axis_data://widesearch/widesearch.jsonl
+  gold_dir: axis_data://widesearch/widesearch_gold
+  num_trials: 4
+  max_tasks: null
+  instance_ids: null
+  shuffle_tasks: false
+  shuffle_seed: null
+  max_concurrent: 100
+agent:
+  prompt_profile: default
+  system_prompt_date: null
+  max_turns: 300
+  keep_tool_result: -1
+  tool_result_role: tool
+  retry:
+    max_task_retries: 0
+    include_failure_summary: false
+    max_final_answer_attempts: 1
+    generation_limit_recovery:
+      non_final_attempt: retry
+      final_attempt: rollback
+agent_prompt:
+  profile: project
+  language: en
+  date: null
+tools:
+  disable_all: false
+  serper_base_url: null
+  jina_base_url: null
+  max_content_length: 409600
+  summary_llm:
+    base_url: null
+    model_name: null
+    api_key_env: SUMMARY_LLM_API_KEY
+    request_extra_body: {}
+    max_input_chars: 120000
+    chunk_overlap_chars: 1200
+    max_chunks: 12
+    chunk_max_concurrent: 4
+    chunked_extraction: true
+    chunk_strategy: single
+    max_recursion_depth: 4
+    cache_enabled: false
+    timeout:
+      connect_seconds: 30.0
+      read_seconds: 300.0
+      total_seconds: null
+    retry:
+      max_attempts: 5
+      backoff_base_seconds: 30.0
+      backoff_multiplier: 2.0
+      backoff_max_seconds: 1200.0
+      retryable_status_codes:
+      - 401
+      - 408
+      - 429
+      jitter: true
+      respect_retry_after: true
+      retry_on_server_errors: true
+      retry_on_timeout: true
+      retry_on_connection_error: true
+  scrape:
+    timeout:
+      connect_seconds: 20
+      read_seconds: 60
+    retry:
+      max_attempts: 4
+      backoff_base_seconds: 1
+      backoff_multiplier: 2
+      backoff_max_seconds: 8
+      retryable_status_codes:
+      - 408
+      - 409
+      - 425
+      - 429
+    fallback_max_attempts: 3
+  search:
+    timeout:
+      total_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_base_seconds: 4
+      backoff_multiplier: 2
+      backoff_max_seconds: 10
+      retryable_status_codes:
+      - 408
+      - 429
+  code_exec:
+    enabled: false
+    sandbox_timeout: 600
+eval:
+  judge_model: null
+  judge_base_url: null
+  judge_api_key_env: JUDGE_API_KEY
+  judge_max_tokens: 10240
+  judge_temperature: 0.0
+  request_timeout: 600
+  max_retries: 1
+  retryable_status_codes:
+  - 401
+  judge_max_concurrent: 8
+  prompts: official
+  extractor: boxed_first

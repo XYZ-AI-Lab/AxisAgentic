@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a problem to help us improve AxisAgentic
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Please search existing
+        issues first to avoid duplicates.
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps, config, or command that reproduce the behavior.
+      placeholder: |
+        1. Configure '...'
+        2. Run '...'
+        3. See error
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Python version, OS, AxisAgentic version or commit, and relevant provider/endpoint details.
+      placeholder: |
+        - Python: 3.12.x
+        - OS: Ubuntu 24.04
+        - AxisAgentic: commit abc1234
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or traceback
+      description: Paste any relevant log output. This will be rendered as code.
+      render: shell
+    validations:
+      required: false

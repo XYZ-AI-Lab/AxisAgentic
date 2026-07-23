@@ -1,0 +1,42 @@
+orchestration:
+  name: default-orchestration
+  description: Main task-solving runner.
+  conversation:
+    system_prompt: You are a careful planner and tool-using runtime.
+    user_prompt_template: |
+      Solve the task below.
+
+      Task:
+      {task}
+    early_stop_announcement_prompt: >-
+      You cannot call any tool now. Generate your final answer to the given task based on the conversation so far.
+    final_response_prompt: null
+    format_error:
+      keywords: ["<tool_call>", "</tool_call>"]
+      strategy: reprompt
+      reprompt: >-
+        Your previous response looked like a tool call, but it did not produce a valid structured tool call.
+        Please either emit a valid tool call or continue without tool-call tags.
+    max_turns: null
+model_client:
+  context_window: 128000
+  max_output_tokens: 4096
+  temperature: 0.0
+  enable_tool_calls: true
+reward:
+  reward_per_success_tool_call: 1.0
+  reward_per_failed_tool_call: -0.1
+  reward_per_rejected_tool_call: -0.2
+  reward_for_wrong_tool_call_format: 0.0
+logger:
+  name: agentic
+  level: info
+  log_dir: logs/agentic
+  persist_json: true
+tools:
+  - name: calculator
+    description: Evaluate a basic arithmetic expression.
+    strict_mode: true
+    timeout_seconds: 30.0
+    tags: [demo]
+external_servers: []

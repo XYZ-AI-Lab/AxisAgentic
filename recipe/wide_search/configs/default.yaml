@@ -1,0 +1,269 @@
+schema_version: 1
+
+# Recipe wide-search default config.
+#
+# Default = project preset: \\boxed{<markdown table>} agent prompt + boxed_first
+# extractor, paired with the official judge model + official judge prompts.
+# This matches the \\boxed{} answer convention used by recipe/web_search/.
+#
+# To run the upstream WideSearch leaderboard preset (no \\boxed wrapper, official
+# extractor), flip the two fields tagged "OFFICIAL PRESET" below:
+#   agent_prompt.profile: project   ->  official
+#   eval.extractor:       boxed_first ->  official_only
+#
+# Override model.openai_model, model.openai_base_url, model.endpoint_profile,
+# run.output_dir, eval.judge_model, and eval.judge_base_url for a real run.
+
+run:
+  output_dir: axis_log://wide_search_infer/widesearch_default
+  num_runs: 1
+  resume: false
+  # Default-off: exact request/response payload logging can serialize large
+  # conversations and introduce client-side latency at high concurrency.
+  model_request_logging: false
+  # auto resolves a model-family renderer from model.endpoint_profile and
+  # agentic/model_assets/manifest.yaml when a prompt render asset exists.
+  system_prompt_render_template: auto
+  # Prefer the repo-relative env file.
+  env_file: .envs/.env
+  log_level: INFO
+
+model:
+  # Required per run. Set these three fields together:
+  # - openai_model: served model name accepted by the endpoint.
+  # - openai_base_url: OpenAI-compatible /v1 base URL.
+  # - endpoint_profile: model-family behavior selector.
+  openai_model: null
+  openai_base_url: null
+  api_key_env: OPENAI_API_KEY
+  # Qwen3.5-397B-A17B uses qwen3-thinking; the exact model id selects its
+  # Qwen3.5 chat-template asset from agentic/model_assets/manifest.yaml.
+  endpoint_profile: null  # deepseek-v4-pro, glm-5.1, kimi-k2.6, qwen3-thinking
+  # Replay assistant reasoning_content into later model requests. Keep enabled
+  # for reasoning-visibility trajectory collection unless the endpoint rejects
+  # historical reasoning fields.
+  preserve_reasoning_content: true
+  response_reasoning_fields:
+    - reasoning_content
+    - reasoning
+    - reasoning_details
+  max_tokens_field: null
+  parallel_tool_calls: false
+  parse_embedded_thinking: true
+  transport:
+    # Per HTTP model request timeout passed to AsyncOpenAI. High-latency
+    # endpoints may spend up to this long before timeout retry handling starts.
+    timeout:
+      total_seconds: 600
+    # Transient endpoint failures retried inside the same model call; they do
+    # not consume task retry or response-retry budget.
+    retry:
+      retryable_status_codes:
+        - 401
+        - 408
+        - 429
+        - 500
+        - 502
+        - 503
+        - 504
+      backoff_base_seconds: 60
+      backoff_multiplier: 2
+      backoff_max_seconds: 300
+      jitter: true
+      respect_retry_after: true
+      retry_on_timeout: true
+      retry_on_connection_error: true
+      # Continuous transient endpoint failures with no successful model
+      # response for this long trigger process exit. Any success resets it.
+      exit_after_seconds: 1800
+
+  # Provider/serving-specific request body.
+  #
+  # This maps to the OpenAI SDK extra_body field and is sent alongside the
+  # standard chat-completions payload. Leave it empty for endpoints that either
+  # ignore template controls or already expose the desired default behavior.
+  #
+  # For reasoning-visible collection, these flags control whether historical
+  # assistant thinking is rendered back into the endpoint's chat template. They
+  # do not change AxisAgentic trace storage; content, reasoning_content, and
+  # tool calls remain structured in the logs.
+  request_extra_body: {}
+
+  # DeepSeek V4 Pro reasoning-visible self-host example.
+  # - chat_template_kwargs.thinking=true selects the thinking-mode rendering
+  #   path so prior reasoning_content can be rendered inside <think>...</think>.
+  # - separate_reasoning=true asks the compatible serving path to keep reasoning
+  #   separated from visible assistant content in responses.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     thinking: true
+  #   separate_reasoning: true
+
+  # GLM 5.1 reasoning-visible self-host example.
+  # - clear_thinking=false prevents the GLM template from clearing historical
+  #   assistant thinking before later user turns.
+  # - enable_thinking=true starts the next assistant generation in thinking mode.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     clear_thinking: false
+  #     enable_thinking: true
+
+  # Kimi K2.6 reasoning-visible self-host example.
+  # - thinking=true enables Kimi thinking-mode prompt rendering.
+  # - preserve_thinking=true keeps historical <think>...</think> content instead
+  #   of replacing prior thinking with empty <think></think> blocks.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     thinking: true
+  #     preserve_thinking: true
+
+  # Qwen3.5-397B-A17B self-host example.
+  # - endpoint_profile remains qwen3-thinking.
+  # - configure the serving host with its Qwen3 reasoning and tool-call
+  #   parsers when the endpoint requires them.
+  # - enable_thinking=true keeps the next assistant generation in thinking mode.
+  # request_extra_body:
+  #   chat_template_kwargs:
+  #     enable_thinking: true
+
+  temperature: 1.0
+  top_p: 0.95
+  repetition_penalty: 1.05
+  max_output_tokens: 16384
+  # Set to the endpoint's reported usable context. Example values below should
+  # be verified against the serving endpoint:
+  # - DeepSeek V4 Pro self-host: 253440
+  # - GLM 5.1 BF16 self-host: 202752
+  # - Kimi K2.6 and Qwen3.5-397B-A17B: 262144
+  context:
+    max_context_length: 262144
+    safety_margin: 4096
+    # Used only when limit_detection=estimated:
+    # - model_client: delegate to model_client.estimate_tokens.
+    # - cheap: additive character estimate with incremental tracking and
+    #   provider input_tokens calibration.
+    # - chat_template: tokenizer/chat-template estimate; more exact near the
+    #   limit but can add client-side latency on long conversations.
+    estimator: cheap
+    # Context-limit detection mode. Allowed values:
+    # - provider_error: default for high-concurrency rollout. The runtime does
+    #   not run local context-budget checks; it relies on model-client
+    #   context-length errors and finish_reason=length, then applies
+    #   agent.retry.generation_limit_recovery below.
+    # - estimated: run local token-estimate preflight before model calls. Use
+    #   only when the provider does not reliably reject over-context requests,
+    #   or when proactive local finalization is explicitly desired.
+    limit_detection: provider_error
+    token_estimation_chars_per_token: 3.0
+  # Provider-neutral retries for truncated or severely repetitive responses.
+  response_retry:
+    wait_seconds: 30
+    max_attempts: 10
+
+benchmark:
+  name: widesearch
+  data_path: axis_data://widesearch/widesearch.jsonl
+  gold_dir: axis_data://widesearch/widesearch_gold
+  num_trials: 4
+  max_tasks: null
+  instance_ids: null
+  shuffle_tasks: false
+  shuffle_seed: null
+  max_concurrent: 32
+
+agent:
+  max_turns: 300
+  keep_tool_result: -1
+  tool_result_role: tool
+  retry:
+    max_task_retries: 0
+    include_failure_summary: false
+    max_final_answer_attempts: 1
+    # Controls both provider context-length errors and model responses with
+    # finish_reason=length.
+    generation_limit_recovery:
+      # Allowed values:
+      # - retry: default for non-final attempts; end this attempt and use the
+      #   remaining outer retry quota.
+      # - rollback: roll back the latest assistant/tool-result exchange and
+      #   regenerate within the same attempt.
+      non_final_attempt: retry
+      # Allowed values:
+      # - rollback: default for the final attempt; repeatedly roll back older
+      #   assistant/tool-result exchanges and regenerate with the final prompt.
+      # - terminate: stop immediately when no outer retry remains.
+      final_attempt: rollback
+
+agent_prompt:
+  # OFFICIAL PRESET: change to `official` to use the upstream agent prompt.
+  # Must be flipped together with eval.extractor below (project ↔ boxed_first,
+  # official ↔ official_only).
+  profile: project
+  language: en
+  date: null
+
+tools:
+  serper_base_url: null
+  jina_base_url: null
+  max_content_length: 409600
+  summary_llm:
+    base_url: null
+    model_name: null
+    api_key_env: SUMMARY_LLM_API_KEY
+    cache_enabled: false
+    # Per-request timeout for the summary endpoint (long read for generation).
+    timeout:
+      connect_seconds: 30
+      read_seconds: 300
+    # Transient-error retry. jitter + respect_retry_after only affect the retry
+    # (instability) path; a request that succeeds first try is unaffected.
+    retry:
+      max_attempts: 5
+      backoff_base_seconds: 30
+      backoff_multiplier: 2
+      backoff_max_seconds: 1200
+      retryable_status_codes: [401, 408, 429]
+      jitter: true
+      respect_retry_after: true
+  # Jina fetch + direct-HTTP fallback (short read; fixed backoff).
+  scrape:
+    timeout:
+      connect_seconds: 20
+      read_seconds: 60
+    retry:
+      max_attempts: 4
+      backoff_base_seconds: 1
+      backoff_multiplier: 2
+      backoff_max_seconds: 8
+      retryable_status_codes: [408, 409, 425, 429]
+    fallback_max_attempts: 3
+  # Serper web search. Only retries connection errors, timeouts, and the listed
+  # status codes (no longer every 4xx).
+  search:
+    timeout:
+      total_seconds: 30
+    retry:
+      max_attempts: 3
+      backoff_base_seconds: 4
+      backoff_multiplier: 2
+      backoff_max_seconds: 10
+      retryable_status_codes: [408, 429]
+
+eval:
+  # null => use JUDGE_MODEL from env, falling back to model.openai_model.
+  judge_model: null
+  # null => use JUDGE_BASE_URL from env, falling back to model.openai_base_url.
+  judge_base_url: null
+  judge_api_key_env: JUDGE_API_KEY
+  judge_max_tokens: 10240
+  judge_temperature: 0.0
+  request_timeout: 600
+  # 1 retry mirrors the official llm_judge_column behavior.
+  max_retries: 1
+  retryable_status_codes: [401]
+  judge_max_concurrent: 8
+  # project | official — controls primary_key_preprocess + llm_judge_column prompts.
+  prompts: official
+  # OFFICIAL PRESET: change to `official_only` when agent_prompt.profile=official.
+  # Must be flipped together with agent_prompt.profile above.
+  extractor: boxed_first

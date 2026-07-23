@@ -1,0 +1,118 @@
+schema_version: 1
+
+# Model-family matching used by the OpenAI-compatible runtime. The public
+# package intentionally does not bundle model chat templates, tokenizers, or
+# serving patches. Users can provide a local template explicitly when they
+# enable chat-template rendering.
+models:
+  - model_id: deepseek-ai/DeepSeek-V4-Pro
+    endpoint_profiles: [deepseek-v4-pro]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: API reasoning_content when exposed by the provider
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [deepseek-ai/DeepSeek-V4-Pro, DeepSeek-V4-Pro, deepseek-v4-pro]
+      regex: ['(?i)deepseek.*v4.*pro']
+
+  - model_id: Qwen/Qwen3-30B-A3B-Thinking-2507
+    endpoint_profiles: [qwen3-thinking]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: reasoning_content or embedded think blocks, depending on the provider
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [Qwen/Qwen3-30B-A3B-Thinking-2507, qwen3-30b-a3b-thinking-2507]
+      regex: ['(?i)qwen3.*30b.*a3b.*thinking', '(?i)qwen3.*thinking.*a3b']
+
+  - model_id: Qwen/Qwen3-235B-A22B-Thinking-2507
+    endpoint_profiles: [qwen3-thinking]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: reasoning_content or embedded think blocks, depending on the provider
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [Qwen/Qwen3-235B-A22B-Thinking-2507, qwen3-235b-a22b-thinking-2507]
+      regex: ['(?i)qwen3.*235b.*a22b.*thinking', '(?i)qwen3.*thinking.*a22b']
+
+  - model_id: Qwen/Qwen3.5-397B-A17B
+    endpoint_profiles: [qwen3-thinking]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: reasoning_content or embedded think blocks, depending on the provider
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [Qwen/Qwen3.5-397B-A17B, Qwen3.5-397B-A17B, qwen3.5-397b-a17b]
+      regex: ['(?i)qwen3[._-]?5.*397b.*a17b', '(?i)qwen.*397b.*a17b']
+
+  - model_id: moonshotai/Kimi-K2.6
+    endpoint_profiles: [kimi-k2.6]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: API reasoning_content when exposed by the provider
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [moonshotai/Kimi-K2.6, Kimi-K2.6, kimi-k2.6]
+      regex: ['(?i)kimi.*k2\.?6']
+
+  - model_id: zai-org/GLM-5.1
+    endpoint_profiles: [glm-5.1]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: API reasoning_content when exposed by the provider
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [zai-org/GLM-5.1, GLM-5.1, glm-5.1]
+      regex: ['(?i)glm.*5\.1']
+
+  - model_id: MiniMaxAI/MiniMax-M2
+    endpoint_profiles: [minimax]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: embedded think blocks or provider-specific reasoning fields
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [MiniMaxAI/MiniMax-M2, MiniMax-M2, minimax-m2]
+      regex: ['(?i)minimax.*m2$']
+
+  - model_id: MiniMaxAI/MiniMax-M2.7
+    endpoint_profiles: [minimax]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: embedded think blocks or provider-specific reasoning fields
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [MiniMaxAI/MiniMax-M2.7, MiniMax-M2.7, minimax-m2.7]
+      regex: ['(?i)minimax.*m2\.7']
+
+  - model_id: nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4
+    endpoint_profiles: [nemotron]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: embedded think blocks or provider-specific reasoning fields
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4, NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4]
+      regex: ['(?i)nemotron.*3.*super']
+
+  - model_id: Salesforce/xLAM-2-32b-fc-r
+    endpoint_profiles: [xlam]
+    chat_template_asset: null
+    parser_asset: null
+    helper_assets: []
+    thinking_handling: visible content and tool calls
+    status: endpoint profile supported; no bundled model assets
+    match:
+      exact: [Salesforce/xLAM-2-32b-fc-r, xLAM-2-32b-fc-r]
+      regex: ['(?i)xlam.*2.*32b.*fc']
+
+assets: {}

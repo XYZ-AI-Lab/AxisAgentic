@@ -1,0 +1,6 @@
+include LICENSE NOTICE README.md README.zh-CN.md
+include pyproject.toml setup.py setup_env.sh .env.example
+recursive-include agentic *.yaml
+recursive-include recipe *.yaml
+recursive-include configs *.yaml
+recursive-include docs *.md *.svg
