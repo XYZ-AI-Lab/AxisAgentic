@@ -6,7 +6,7 @@
 
 # Architecture
 
-AxisAgentic separates reusable agent-runtime primitives from benchmark-specific recipes. The core library has no dependency on a particular benchmark; recipes assemble datasets, prompts, tools, policies, evaluators, and artifacts around it.
+AxisAgentic separates reusable agent-runtime primitives from task-specific recipes. The core library has no dependency on a particular benchmark; recipes assemble datasets, prompts, tools, policies, evaluators, and artifacts around it.
 
 ```mermaid
 flowchart LR
@@ -43,7 +43,7 @@ The web-search orchestrator adds duplicate-query handling, attempt budgets, cont
 
 `agentic.model_clients` provides an asynchronous OpenAI-compatible client with endpoint profiles, reasoning-content preservation, retry/backoff, token usage, and optional request logging.
 
-`agentic.tools.ToolManager` owns registration, schema validation, execution limits, argument repair, lifecycle hooks, metrics, and tool traces. The current Aquila reference recipe centers on search, scrape, and Python, with optional E2B-backed code execution. These tools are one composition of the runtime: domain-specific, general-purpose, or coding-agent recipes can register different tools and evaluators without changing the core execution model.
+`agentic.tools.ToolManager` owns registration, schema validation, execution limits, argument repair, lifecycle hooks, metrics, and tool traces. The current Web Search reference recipe centers on search, scrape, and Python, with optional E2B-backed code execution. These tools are one composition of the runtime: domain-specific, general-purpose, or coding-agent recipes can register different tools and evaluators without changing the core execution model.
 
 ### Observability and data products
 
@@ -67,4 +67,4 @@ The web-search orchestrator adds duplicate-query handling, attempt budgets, cont
 - Implement `agentic.model_clients.base.ModelClient` for a non-OpenAI transport.
 - Subclass `ConversationRuntime` or `TaskOrchestrator` for new state or control policies.
 - Implement dataset/evaluator contracts under `agentic.datasets` and `agentic.evaluation`.
-- Add a self-contained package under `recipe/` when a benchmark needs its own config, prompts, runner, and evaluation artifacts.
+- Add a self-contained package under `recipe/` when a task family needs its own config, prompts, runner, and evaluation artifacts.

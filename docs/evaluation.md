@@ -50,7 +50,7 @@ The dashboard compares experiments, accuracy, WideSearch metrics, timing, trace 
 
 ## Interpreting the reported benchmark figure
 
-The top-level [README](../README.md#results) reproduces the six-panel comparison from the XYZ-Aquila technical report. The report evaluates XYZ-Aquila-mini and XYZ-Aquila-pro on public agentic search benchmarks while withholding external benchmarks from routine optimization decisions.
+The XYZ-Aquila technical report evaluates the system on public agentic search benchmarks while withholding external benchmarks from routine optimization decisions. See the technical report for the complete comparison figures and evaluation protocol.
 
 Some baselines are taken from heterogeneous public reports. Their harnesses, web access, tools, judges, and evaluation dates can differ. The figure therefore supports benchmark-level comparison, not a fully controlled universal ranking.
 

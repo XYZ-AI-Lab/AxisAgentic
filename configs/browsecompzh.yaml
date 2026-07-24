@@ -74,7 +74,7 @@ benchmark:
 agent:
   prompt_profile: default
   system_prompt_date: null
-  max_turns: 80
+  max_turns: 300
   keep_tool_result: -1
   tool_result_role: tool
   retry:

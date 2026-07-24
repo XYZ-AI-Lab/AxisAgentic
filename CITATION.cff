@@ -1,6 +1,6 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
-title: "AxisAgentic: An Extensible Runtime and Evaluation Framework for Long-Horizon Agents"
+title: "AxisAgentic: An Extensible Execution and Trajectory-Collection Framework for Long-Horizon Agents"
 type: software
 authors:
   - family-names: "Wang"

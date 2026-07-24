@@ -50,7 +50,7 @@ streamlit run recipe/dashboard/app.py --server.fileWatcherType none -- \
 
 ## 如何理解报告中的基准图表
 
-顶层[中文 README](../README.zh-CN.md#结果)复现了 XYZ-Aquila 技术报告中的六项对比。报告在公开的智能体搜索基准上评估 XYZ-Aquila-mini 和 XYZ-Aquila-pro，同时不将外部基准用于常规优化决策。
+XYZ-Aquila 技术报告在公开的智能体搜索基准上评估该系统，同时不将外部基准用于常规优化决策。完整的对比图表和评测口径请参阅技术报告。
 
 部分基线来自不同的公开报告，其评测框架、Web 访问方式、工具、裁判模型和评估日期可能存在差异。因此，该图表支持基准层面的对比，而不是在完全受控条件下得出的通用排名。
 

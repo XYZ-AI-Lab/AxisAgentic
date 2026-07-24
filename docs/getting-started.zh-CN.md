@@ -110,6 +110,24 @@ python -m recipe.web_search.runners.run_eval_config \
 
 要执行小规模端到端检查，请将 `benchmark.max_tasks` 设置为较小值并降低 `benchmark.max_concurrent`，然后移除 `--dry-run`。
 
+## 检查和导出轨迹
+
+任务完成后，将 `<attempt.json>` 指向运行目录 `web-search-benchmark/` 下的 `<task>_attempt-<n>.json`，即可重建某个阶段的模型可见上下文：
+
+```bash
+python -m recipe.web_search.runners.replay_trace \
+  <attempt.json> --show-visible
+```
+
+也可以将完成的 Web Search 轨迹导出为 Swift Agent SFT 数据。导出器会按运行时 marker 重放可见性，并可将 source trace、任务状态等信息写入样本元数据：
+
+```bash
+python -m recipe.web_search.runners.export_sft \
+  --run-dir <run-dir> --include-metadata
+```
+
+WideSearch 的导出入口和按分数筛选选项请参阅 [WideSearch recipe](../recipe/wide_search/README.md)。
+
 ## 开发检查
 
 ```bash

@@ -110,6 +110,24 @@ python -m recipe.web_search.runners.run_eval_config \
 
 For a small end-to-end check, set `benchmark.max_tasks` to a low value and reduce `benchmark.max_concurrent`, then remove `--dry-run`.
 
+## Inspect and export traces
+
+After a task completes, point `<attempt.json>` at a persisted `<task>_attempt-<n>.json` under the run's `web-search-benchmark/` directory to reconstruct the model-visible context:
+
+```bash
+python -m recipe.web_search.runners.replay_trace \
+  <attempt.json> --show-visible
+```
+
+Completed Web Search traces can also be exported as Swift Agent SFT data. The exporter replays runtime visibility markers and can include source-trace and task-status metadata in each sample:
+
+```bash
+python -m recipe.web_search.runners.export_sft \
+  --run-dir <run-dir> --include-metadata
+```
+
+See the [WideSearch recipe](../recipe/wide_search/README.md) for its export entry point and score-based filtering options.
+
 ## Development checks
 
 ```bash

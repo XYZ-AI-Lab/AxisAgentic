@@ -6,7 +6,7 @@
 
 # 架构
 
-AxisAgentic 将可复用的智能体运行时原语与基准特定的 recipe 分离。核心库不依赖任何特定基准；recipe 围绕核心库组装数据集、提示词、工具、策略、评估器和产物。
+AxisAgentic 将可复用的智能体运行时原语与任务特定的 recipe 分离。核心库不依赖任何特定基准；recipe 围绕核心库组装数据集、提示词、工具、策略、评估器和产物。
 
 ```mermaid
 flowchart LR
@@ -43,7 +43,7 @@ Web Search 编排器增加了重复查询处理、尝试预算、上下文策略
 
 `agentic.model_clients` 提供异步的 OpenAI 兼容客户端，支持端点 profile、推理内容保留、重试与退避、token 使用统计和可选请求日志。
 
-`agentic.tools.ToolManager` 负责工具注册、schema 验证、执行限制、参数修复、生命周期 hook、指标和工具轨迹。当前 Aquila 参考 recipe 以搜索、抓取和 Python 为核心，并支持可选的 E2B 代码执行。这些工具只是运行时的一种组合方式：特定领域、通用型或编程智能体 recipe 可以注册不同的工具和评估器，而无需改变核心执行模型。
+`agentic.tools.ToolManager` 负责工具注册、schema 验证、执行限制、参数修复、生命周期 hook、指标和工具轨迹。当前 Web Search 参考 recipe 以搜索、抓取和 Python 为核心，并支持可选的 E2B 代码执行。这些工具只是运行时的一种组合方式：特定领域、通用型或编程智能体 recipe 可以注册不同的工具和评估器，而无需改变核心执行模型。
 
 ### 可观测性与数据产物
 
@@ -67,4 +67,4 @@ Web Search 编排器增加了重复查询处理、尝试预算、上下文策略
 - 实现 `agentic.model_clients.base.ModelClient`，接入非 OpenAI 传输协议。
 - 继承 `ConversationRuntime` 或 `TaskOrchestrator`，实现新的状态或控制策略。
 - 在 `agentic.datasets` 和 `agentic.evaluation` 下实现数据集与评估器契约。
-- 当某个基准需要独立配置、提示词、runner 和评估产物时，在 `recipe/` 下添加自包含 package。
+- 当某类任务需要独立配置、提示词、runner 和评估产物时，在 `recipe/` 下添加自包含 package。
