@@ -24,22 +24,22 @@
   </p>
 </div>
 
-AxisAgentic is an extensible execution and trajectory-collection framework for long-horizon AI agents built with OpenAI-compatible endpoints and pluggable local model clients. It provides state-faithful multi-turn execution, tool orchestration, context management, structured traces, benchmark evaluation, and training-data export: the same trace supports recovery, replay, and analysis during inference and can be converted into filtered, replayable SFT data from the exact runtime-visible state.
+AxisAgentic is an extensible runtime for long-horizon AI agents. It also collects the trajectories produced during execution. The runtime works with OpenAI-compatible endpoints and pluggable local model clients, and handles multi-turn execution, tool orchestration, context management, recovery, and benchmark evaluation. Each trace preserves the state visible to the model, so the same record can support recovery and replay, benchmark evaluation, or filtered SFT export.
 
-The repository currently provides Web Search and WideSearch recipes as reference implementations for search workloads. XYZ-Aquila is a flagship system built with AxisAgentic, and the same extension points support additional domain-specific, general-purpose, and coding-agent recipes. Model weights are not bundled in this repository.
+Web Search and WideSearch are the current reference recipes. The same extension points can support domain, general-purpose, and coding agents. This repository does not include model weights.
 
 ## ✨ Core capabilities
 
-- State-faithful conversation execution over append-only traces, with reconstruction of the context visible at each runtime stage.
-- Pluggable model clients, tools, orchestrators, datasets, evaluators, rewards, and recipe-level control policies.
-- Long-horizon context budgets, compaction, rollback, retry/recovery, self-verification, and tool limits.
-- Structured task traces, timing and token metrics, incremental evaluation artifacts, and provenance for data selection.
-- Runtime-visibility-aware SFT export and rollout interfaces for connecting agent execution to external training systems.
-- Strict, reproducible YAML configuration with portable path schemes for data, models, and logs.
+- Append-only traces preserve runtime events and reconstruct the context visible to the model at any stage.
+- Model clients, tools, orchestrators, datasets, evaluators, reward functions, and recipe policies are replaceable.
+- Context budgets, compaction, rollback, retries, recovery, self-verification, and tool limits support long runs.
+- Each task records traces, token and timing metrics, evaluation artifacts, and provenance for trajectory selection.
+- SFT exporters replay runtime visibility markers, while rollout interfaces connect execution to external training systems.
+- Strict YAML schemas and portable path schemes keep runs reproducible across environments.
 
 ## 🔁 From execution to learning
 
-AxisAgentic links inference and trajectory collection through one semantic path:
+Every task writes an append-only trace. The trace is the common source for replay, evaluation, and trajectory collection. Selected trajectories can then be exported for external training.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/axisagentic-execution-learning-loop-dark.svg">
@@ -47,13 +47,13 @@ AxisAgentic links inference and trajectory collection through one semantic path:
   <img alt="AxisAgentic execution-to-learning loop: runtime traces feed replay, evaluation, trajectory collection, state-faithful SFT export, and external training" src="docs/assets/axisagentic-execution-learning-loop-light.svg">
 </picture>
 
-Runtime markers record visibility changes such as rollback, context compaction, and discard-all. Replaying those markers reconstructs what the model actually saw at a given stage; the same semantics drive trace inspection and training-data export, avoiding hidden history or rolled-back actions in supervised examples.
+Runtime markers record rollback, context compaction, and discard-all events. Replaying them reconstructs what the model saw at a given stage. Trace inspection and SFT export use the same rules, so supervised examples exclude hidden history and rolled-back actions.
 
-The built-in recipe exporters produce Swift Agent and related training formats while preserving source-trace, task-status, and optional metadata. Final correctness filtering, loss masks, and the training framework remain with the external training pipeline; AxisAgentic provides the trace, replay, and export boundary that keeps inference and training interaction semantics aligned.
+Recipe exporters emit Swift Agent and related training formats with the source trace, task status, and optional metadata. The external training pipeline owns final correctness filters, loss masks, and optimization. AxisAgentic supplies the replay and export boundary so inference and training use the same interaction history.
 
 ## 🦅 Flagship reference: XYZ-Aquila
 
-XYZ-Aquila is a flagship search system built with AxisAgentic. It combines search, scrape, context management, recovery, evaluation, and state-faithful SFT data export to demonstrate how a complete agent system and training pipeline can reuse AxisAgentic's execution and trajectory-collection capabilities. The same interfaces can be applied to other model clients, tools, and task domains.
+XYZ-Aquila is a search system built with AxisAgentic. Its recipe combines search and scraping with context management, recovery, evaluation, and state-faithful SFT export. The underlying interfaces also work with other model clients, tools, and task domains.
 
 ### 📊 Results
 
@@ -61,13 +61,13 @@ The [Aquila technical report](https://xyz-lab.ai/blogs/ai4ai-at-scale/) reports 
 
 ![XYZ-Aquila benchmark results across six agentic search benchmarks](docs/assets/aquila-benchmark-results.svg)
 
-*Metrics shown in the figure: BrowseComp — LLM-judge accuracy; BrowseComp-ZH — LLM-judge accuracy; DeepSearchQA — macro F1; LiveBrowseComp — LLM-judge accuracy; Humanity's Last Exam — LLM-judge accuracy; WideSearch — item-level F1 Max@4. See [Evaluation and reproducibility](docs/evaluation.md) for details.*
+*Metrics: BrowseComp, BrowseComp-ZH, LiveBrowseComp, and Humanity's Last Exam use LLM-judge accuracy; DeepSearchQA uses macro F1; WideSearch uses item-level F1 Max@4. See [Evaluation and reproducibility](docs/evaluation.md) for details.*
 
-Some comparison values come from public reports that used different harnesses, tools, judges, and evaluation dates. These numbers should be read as benchmark-level comparisons, not as a single controlled universal ranking.
+Some baseline values come from public reports with different harnesses, tools, judges, and evaluation dates. Treat the figure as a benchmark-level comparison rather than a controlled universal ranking.
 
 ## 🚀 Get started
 
-AxisAgentic requires Python 3.12 or newer and an OpenAI-compatible model endpoint. For installation, provider variables, recipe configuration, dry runs, replay, and SFT export, see [Getting started](docs/getting-started.md) and [Configuration](docs/configuration.md).
+AxisAgentic requires Python 3.12 or newer and an OpenAI-compatible model endpoint. [Getting started](docs/getting-started.md) covers installation, provider variables, recipe configuration, dry runs, replay, and SFT export. See [Configuration](docs/configuration.md) for the full configuration reference.
 
 ```bash
 git clone https://github.com/XYZ-AI-Lab/AxisAgentic.git
@@ -79,7 +79,7 @@ source .envs/axis_agentic_env.sh
 cp .env.example .envs/.env
 ```
 
-After setting the provider and dataset values, validate the Web Search reference recipe without starting a run:
+After setting the provider and dataset values, validate the Web Search recipe without starting a run:
 
 ```bash
 cp recipe/web_search/configs/default.yaml my-search-run.yaml
@@ -100,10 +100,7 @@ python -m recipe.web_search.runners.run_eval_config \
 
 ## 🤝 Contributing
 
-Contributions are welcome. Please read the [contributing guide](CONTRIBUTING.md)
-for development setup and the checks your change must pass, and note our
-[Code of Conduct](CODE_OF_CONDUCT.md). To report a security vulnerability, see
-our [security policy](SECURITY.md).
+The [contributing guide](CONTRIBUTING.md) covers development setup and required checks. Contributors must follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities through the [security policy](SECURITY.md).
 
 ## 📜 License
 
@@ -116,7 +113,7 @@ If you use this codebase, please cite the software:
 ```bibtex
 @software{wang2026axisagentic,
   author       = {Wang, Jinyu and Zhang, Yifei and {{XYZ Agentic Team}}},
-  title        = {AxisAgentic: An Extensible Execution and Trajectory-Collection Framework for Long-Horizon Agents},
+  title        = {AxisAgentic: An Extensible Runtime and Trajectory-Collection Framework for Long-Horizon Agents},
   organization = {XYZ AI Lab},
   year         = {2026},
   url          = {https://github.com/XYZ-AI-Lab/AxisAgentic}

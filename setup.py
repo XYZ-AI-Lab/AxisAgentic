@@ -30,7 +30,7 @@ setup(
         "wide_search": ["dateparser", "numpy", "pandas"],
     },
     python_requires=">=3.12",
-    description="Extensible execution and trajectory-collection framework for long-horizon AI agents.",
+    description="Extensible runtime and trajectory-collection framework for long-horizon AI agents.",
     license="Apache-2.0",
     author="XYZ Agentic Team",
     url="https://github.com/XYZ-AI-Lab/AxisAgentic",
